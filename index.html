@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPI Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1e293b;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: #1e293b;
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    header svg { flex-shrink: 0; }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      width: 220px;
+      background: white;
+      border-right: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ---- Metric list ---- */
+    .metric-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-top: 16px;
+    }
+
+    .metric-section h2 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #94a3b8;
+      padding: 0 16px 8px;
+      flex-shrink: 0;
+    }
+
+    .year-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .metric-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .metric-group-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #cbd5e1;
+      padding: 10px 16px 3px;
+    }
+
+    .metric-item {
+      display: block;
+      width: 100%;
+      padding: 5px 16px;
+      font-size: 13px;
+      color: #475569;
+      cursor: pointer;
+      border: none;
+      background: none;
+      text-align: left;
+      transition: background 0.1s, color 0.1s;
+      line-height: 1.4;
+    }
+
+    .metric-item:hover:not(.selected) { background: #f1f5f9; color: #1e293b; }
+
+    .metric-item.selected {
+      background: #2563eb;
+      color: white;
+      font-weight: 500;
+    }
+
+    /* ---- Chart area ---- */
+    .chart-area {
+      flex: 1;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .chart-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      line-height: 1;
+    }
+
+    .chart-group {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .refresh-btn {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #475569;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      flex-shrink: 0;
+    }
+
+    .refresh-btn:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
+    .refresh-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .refresh-btn.spinning svg { animation: spin 0.7s linear infinite; }
+
+    /* ---- Years bar ---- */
+    .years-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      padding-top: 10px;
+      flex-shrink: 0;
+    }
+
+    .years-bar .years-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #94a3b8;
+      margin-right: 6px;
+    }
+
+    .year-list { list-style: none; display: flex; gap: 4px; }
+
+    .year-item label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      background: white;
+      transition: background 0.1s, border-color 0.1s;
+      user-select: none;
+    }
+
+    .year-item label:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+    .year-item input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .chart-card {
+      flex: 1;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 15px;
+      gap: 8px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <h1>KPI Dashboard</h1>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="metric-section">
+        <h2>Metric</h2>
+        <div class="metric-list" id="metricList"></div>
+      </div>
+    </aside>
+
+    <div class="chart-area">
+      <div class="chart-header">
+        <div class="chart-title" id="chartTitle">—</div>
+        <div class="chart-group" id="chartGroup"></div>
+        <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+      <div class="chart-card">
+        <div class="loading" id="loading">
+          <div class="spinner"></div> Loading data...
+        </div>
+        <canvas id="chart" style="display:none; width:100%; height:100%;"></canvas>
+      </div>
+      <div class="years-bar">
+        <span class="years-label">Years</span>
+        <ul class="year-list" id="yearList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const YEAR_COLORS = [
+      { border: '#2563eb', bg: 'rgba(37,99,235,0.08)' },   // blue
+      { border: '#16a34a', bg: 'rgba(22,163,74,0.08)' },   // green
+      { border: '#dc2626', bg: 'rgba(220,38,38,0.08)' },   // red
+      { border: '#9333ea', bg: 'rgba(147,51,234,0.08)' },  // purple
+      { border: '#ea580c', bg: 'rgba(234,88,12,0.08)' },   // orange
+    ];
+
+    // Metrics that are stored as decimal fractions representing percentages
+    const PCT_METRICS = new Set([
+      'Conversion %', 'Retention %', 'Reactivations %', 'Churn Rate %',
+      'Hold %', 'Casino Hold %', 'Lotto Hold %', 'Sports Hold',
+      'Horses Hold', 'Reinvestment',
+    ]);
+
+    // Metrics that are whole-number counts
+    const INT_METRICS = new Set([
+      'Active', 'Registrations', "FTD's", 'Retained # Week',
+      'Reactivations # Week', 'Churn Overall # Week', 'Deposits #',
+      'Casino Actives', 'Lotto Actives', 'Sports Actives', 'Horses Actives',
+    ]);
+
+    let appData = null;
+    let chart = null;
+    let currentMetric = '';
+
+    function formatValue(val, name) {
+      if (val === null || val === undefined) return 'N/A';
+      if (PCT_METRICS.has(name)) return (val * 100).toFixed(2) + '%';
+      if (INT_METRICS.has(name)) return val.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      const abs = Math.abs(val);
+      if (abs >= 1_000_000) return (val / 1_000_000).toFixed(2) + 'M';
+      if (abs >= 1_000) return (val / 1_000).toFixed(1) + 'K';
+      return val.toFixed(2);
+    }
+
+    function formatTick(val, name) {
+      if (PCT_METRICS.has(name)) return (val * 100).toFixed(1) + '%';
+      if (INT_METRICS.has(name)) {
+        if (Math.abs(val) >= 1000) return (val / 1000).toFixed(0) + 'K';
+        return val.toFixed(0);
+      }
+      const abs = Math.abs(val);
+      if (abs >= 1_000_000) return (val / 1_000_000).toFixed(1) + 'M';
+      if (abs >= 1_000) return (val / 1_000).toFixed(0) + 'K';
+      return val.toFixed(0);
+    }
+
+    async function loadData() {
+      const res = await fetch('/api/data');
+      appData = await res.json();
+      init();
+    }
+
+    async function refreshData() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      await fetch('/api/refresh');
+      const res = await fetch('/api/data');
+      appData = await res.json();
+      btn.disabled = false;
+      btn.classList.remove('spinning');
+      updateChart();
+    }
+
+    function init() {
+      // --- Year checkboxes ---
+      const yearList = document.getElementById('yearList');
+      appData.years.forEach((year, idx) => {
+        const color = YEAR_COLORS[idx % YEAR_COLORS.length];
+        const li = document.createElement('li');
+        li.className = 'year-item';
+        li.innerHTML = `
+          <label>
+            <input type="checkbox" value="${year}" checked style="accent-color:${color.border}">
+            <span class="year-dot" style="background:${color.border}"></span>
+            <span>${year}</span>
+          </label>`;
+        li.querySelector('input').addEventListener('change', updateChart);
+        yearList.appendChild(li);
+      });
+
+      // --- Metric list ---
+      const metricList = document.getElementById('metricList');
+      let currentGroup = '';
+      for (const { key, group } of appData.metrics) {
+        if (group !== currentGroup) {
+          const label = document.createElement('div');
+          label.className = 'metric-group-label';
+          label.textContent = group;
+          metricList.appendChild(label);
+          currentGroup = group;
+        }
+        const btn = document.createElement('button');
+        btn.className = 'metric-item';
+        btn.dataset.metric = key;
+        btn.textContent = key;
+        btn.addEventListener('click', () => selectMetric(key));
+        metricList.appendChild(btn);
+      }
+      // --- Chart init ---
+      const canvas = document.getElementById('chart');
+      const ctx = canvas.getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array.from({ length: 52 }, (_, i) => `W${i + 1}`),
+          datasets: [],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { font: { size: 12 }, boxWidth: 28, padding: 16 },
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const val = ctx.raw;
+                  return `  ${ctx.dataset.label}: ${formatValue(val, currentMetric)}`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(0,0,0,0.04)' },
+              ticks: { font: { size: 11 }, maxTicksLimit: 26 },
+            },
+            y: {
+              grid: { color: 'rgba(0,0,0,0.04)' },
+              ticks: {
+                font: { size: 11 },
+                callback: (val) => formatTick(val, currentMetric),
+              },
+            },
+          },
+        },
+      });
+
+      // Select first metric now that chart exists
+      selectMetric(appData.metrics[0].key);
+    }
+
+    function selectMetric(key) {
+      document.querySelectorAll('.metric-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.metric === key);
+      });
+      currentMetric = key;
+      updateChart();
+    }
+
+    function updateChart() {
+      const metric = currentMetric;
+      const metricMeta = appData.metrics.find(m => m.key === metric);
+      const selectedYears = [...document.querySelectorAll('#yearList input:checked')]
+        .map(el => parseInt(el.value));
+      document.getElementById('chartTitle').textContent = metric;
+      document.getElementById('chartGroup').textContent = metricMeta?.group || '';
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('chart').style.display = 'block';
+
+      const datasets = selectedYears.map((year, idx) => {
+        const yearIdx = appData.years.indexOf(year);
+        const color = YEAR_COLORS[yearIdx % YEAR_COLORS.length];
+        const values = appData.data[year]?.[metric] || new Array(52).fill(null);
+        return {
+          label: String(year),
+          data: values,
+          borderColor: color.border,
+          backgroundColor: color.bg,
+          borderWidth: 2,
+          pointRadius: 2.5,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          spanGaps: false,
+          fill: false,
+        };
+      });
+
+      chart.data.datasets = datasets;
+      chart.update();
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
