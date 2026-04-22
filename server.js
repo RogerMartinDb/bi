@@ -68,7 +68,7 @@ const GROUP_ORDER = [
 
 function loadData() {
   const dataDir = path.join(__dirname, 'data');
-  const result = { years: [], metrics: [], data: {} };
+  const result = { years: [], metrics: [], data: {}, dateEndings: {} };
   const metricsOrder = new Map();
 
   const files = fs.readdirSync(dataDir)
@@ -91,25 +91,40 @@ function loadData() {
     result.data[year] = {};
 
     const metricCols = [];
+    let dateEndingCol = -1;
     for (let i = 0; i < headers.length; i++) {
       const h = headers[i];
+      if (h === 'Date Ending') { dateEndingCol = i; continue; }
       if (!h || SKIP.has(h)) continue;
       metricCols.push({ i, name: h });
       if (!metricsOrder.has(h)) metricsOrder.set(h, GROUPS[h] || 'Other');
       result.data[year][h] = new Array(52).fill(null);
     }
 
+    let lastDateEnding = null;
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r];
       const week = row[0];
       if (typeof week !== 'number' || week < 1 || week > 52) continue;
       const wi = Math.round(week) - 1;
+      if (dateEndingCol >= 0 && row[dateEndingCol] != null) {
+        lastDateEnding = row[dateEndingCol];
+      }
       for (const { i, name } of metricCols) {
         const val = row[i];
         if (typeof val === 'number' && isFinite(val)) {
           result.data[year][name][wi] = val;
         }
       }
+    }
+
+    if (lastDateEnding != null) {
+      const d = typeof lastDateEnding === 'number'
+        ? new Date(Date.UTC(1899, 11, 30) + lastDateEnding * 86400000)
+        : lastDateEnding;
+      result.dateEndings[year] = d instanceof Date
+        ? d.toISOString().split('T')[0]
+        : String(lastDateEnding);
     }
   }
 

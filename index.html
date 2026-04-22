@@ -36,6 +36,29 @@
       letter-spacing: -0.01em;
     }
 
+    .data-freshness {
+      margin-left: auto;
+      font-size: 12px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .data-freshness-label {
+      color: #64748b;
+    }
+
+    .data-freshness-date {
+      color: #e2e8f0;
+      font-weight: 600;
+      font-size: 13px;
+      background: rgba(255,255,255,0.08);
+      padding: 3px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
     .main {
       display: flex;
       flex: 1;
@@ -295,6 +318,10 @@
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
     <h1>KPI Dashboard</h1>
+    <div class="data-freshness" id="dataFreshness" style="display:none">
+      <span class="data-freshness-label">Data ending</span>
+      <span class="data-freshness-date" id="dataFreshnessDate"></span>
+    </div>
   </header>
 
   <div class="main">
@@ -328,9 +355,9 @@
           <div class="segmented" id="trendMode">
             <input type="radio" name="trendMode" id="trendOff" value="off">
             <label for="trendOff">Off</label>
-            <input type="radio" name="trendMode" id="trendBoth" value="both" checked>
+            <input type="radio" name="trendMode" id="trendBoth" value="both">
             <label for="trendBoth">Both</label>
-            <input type="radio" name="trendMode" id="trendOnly" value="only">
+            <input type="radio" name="trendMode" id="trendOnly" value="only" checked>
             <label for="trendOnly">Trend only</label>
           </div>
         </div>
@@ -389,9 +416,21 @@
       return val.toFixed(0);
     }
 
+    function updateFreshness() {
+      if (!appData || !appData.dateEndings) return;
+      const latestYear = Math.max(...Object.keys(appData.dateEndings).map(Number));
+      const dateStr = appData.dateEndings[latestYear];
+      if (!dateStr) return;
+      const d = new Date(dateStr + 'T00:00:00Z');
+      const formatted = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+      document.getElementById('dataFreshnessDate').textContent = formatted;
+      document.getElementById('dataFreshness').style.display = '';
+    }
+
     async function loadData() {
       const res = await fetch('/api/data');
       appData = await res.json();
+      updateFreshness();
       init();
     }
 
@@ -404,6 +443,7 @@
       appData = await res.json();
       btn.disabled = false;
       btn.classList.remove('spinning');
+      updateFreshness();
       updateChart();
     }
 
