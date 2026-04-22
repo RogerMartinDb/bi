@@ -1,12 +1,30 @@
+require('dotenv').config();
 const express = require('express');
+const session = require('express-session');
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
+const { registerAuthRoutes, requireAuth } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(express.static(__dirname));
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 8 * 60 * 60 * 1000, // 8 hours
+  },
+}));
+
+// Auth routes (/auth/login, /auth/callback, /auth/logout, /auth/me)
+registerAuthRoutes(app);
+
+// Static files served only to authenticated users
+app.use(requireAuth, express.static(__dirname));
 
 const SKIP = new Set(['_', 'Activity by Vertical', "Other KPI's", 'Date Ending', 'Week']);
 
@@ -153,12 +171,12 @@ const noCache = (req, res, next) => {
   next();
 };
 
-app.get('/api/refresh', noCache, (req, res) => {
+app.get('/api/refresh', noCache, requireAuth, (req, res) => {
   data = loadData();
   res.json({ ok: true });
 });
 
-app.get('/api/data', noCache, (req, res) => res.json(data));
+app.get('/api/data', noCache, requireAuth, (req, res) => res.json(data));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`KPI Dashboard running at http://0.0.0.0:${PORT}`);
