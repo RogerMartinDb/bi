@@ -211,6 +211,51 @@
       flex-shrink: 0;
     }
 
+    /* ---- Trend mode segmented control ---- */
+    .trend-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 16px;
+    }
+
+    .trend-control .trend-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #94a3b8;
+    }
+
+    .segmented {
+      display: inline-flex;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .segmented input { display: none; }
+
+    .segmented label {
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      cursor: pointer;
+      border-right: 1px solid #e2e8f0;
+      transition: background 0.1s, color 0.1s;
+      user-select: none;
+    }
+
+    .segmented label:last-of-type { border-right: none; }
+    .segmented label:hover { background: #f8fafc; color: #1e293b; }
+
+    .segmented input:checked + label {
+      background: #2563eb;
+      color: white;
+    }
+
     .chart-card {
       flex: 1;
       background: white;
@@ -278,6 +323,17 @@
         <canvas id="chart" style="display:none; width:100%; height:100%;"></canvas>
       </div>
       <div class="years-bar">
+        <div class="trend-control">
+          <span class="trend-label">5-wk Trend</span>
+          <div class="segmented" id="trendMode">
+            <input type="radio" name="trendMode" id="trendOff" value="off">
+            <label for="trendOff">Off</label>
+            <input type="radio" name="trendMode" id="trendBoth" value="both" checked>
+            <label for="trendBoth">Both</label>
+            <input type="radio" name="trendMode" id="trendOnly" value="only">
+            <label for="trendOnly">Trend only</label>
+          </div>
+        </div>
         <span class="years-label">Years</span>
         <ul class="year-list" id="yearList"></ul>
       </div>
@@ -368,6 +424,11 @@
         yearList.appendChild(li);
       });
 
+      // --- Trend mode radios ---
+      document.querySelectorAll('#trendMode input').forEach(el => {
+        el.addEventListener('change', updateChart);
+      });
+
       // --- Metric list ---
       const metricList = document.getElementById('metricList');
       let currentGroup = '';
@@ -402,9 +463,13 @@
           plugins: {
             legend: {
               position: 'top',
-              labels: { font: { size: 12 }, boxWidth: 28, padding: 16 },
+              labels: {
+                font: { size: 12 }, boxWidth: 28, padding: 16,
+                filter: (item) => !item.text.endsWith(' trend'),
+              },
             },
             tooltip: {
+              filter: (item) => !item.dataset.label.endsWith(' trend'),
               callbacks: {
                 label: (ctx) => {
                   const val = ctx.raw;
@@ -451,26 +516,64 @@
       document.getElementById('loading').style.display = 'none';
       document.getElementById('chart').style.display = 'block';
 
-      const datasets = selectedYears.map((year, idx) => {
+      const trendMode = document.querySelector('#trendMode input:checked')?.value || 'both';
+
+      const datasets = [];
+      selectedYears.forEach((year) => {
         const yearIdx = appData.years.indexOf(year);
         const color = YEAR_COLORS[yearIdx % YEAR_COLORS.length];
         const values = appData.data[year]?.[metric] || new Array(52).fill(null);
-        return {
-          label: String(year),
-          data: values,
-          borderColor: color.border,
-          backgroundColor: color.bg,
-          borderWidth: 2,
-          pointRadius: 2.5,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          spanGaps: false,
-          fill: false,
-        };
+        if (trendMode !== 'only') {
+          datasets.push({
+            label: String(year),
+            data: values,
+            borderColor: color.border,
+            backgroundColor: color.bg,
+            borderWidth: 2,
+            pointRadius: 2.5,
+            pointHoverRadius: 5,
+            tension: 0.3,
+            spanGaps: false,
+            fill: false,
+          });
+        }
+        if (trendMode !== 'off') {
+          const isOnly = trendMode === 'only';
+          datasets.push({
+            label: isOnly ? String(year) : `${year} trend`,
+            data: smoothSeries(values, 5),
+            borderColor: color.border,
+            backgroundColor: color.bg,
+            borderWidth: isOnly ? 2 : 1.5,
+            borderDash: [4, 4],
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0.4,
+            spanGaps: true,
+            fill: false,
+            order: -1,
+          });
+        }
       });
 
       chart.data.datasets = datasets;
       chart.update();
+    }
+
+    // Centered moving average; windowSize should be odd.
+    function smoothSeries(values, windowSize) {
+      const half = Math.floor(windowSize / 2);
+      return values.map((_, i) => {
+        let sum = 0, count = 0;
+        for (let j = i - half; j <= i + half; j++) {
+          if (j < 0 || j >= values.length) continue;
+          const v = values[j];
+          if (v === null || v === undefined) continue;
+          sum += v;
+          count++;
+        }
+        return count ? sum / count : null;
+      });
     }
 
     loadData();
