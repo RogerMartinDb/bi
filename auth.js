@@ -1,21 +1,42 @@
-const msal = require('@azure/msal-node');
+const DEV_MODE = process.env.DEV_MODE === 'true';
 
-const SCOPES = ['openid', 'profile', 'email', 'User.Read'];
+const DEV_USER = { name: 'Dev User', username: 'dev@localhost', homeAccountId: 'dev' };
 
-function createMsalClient() {
-  return new msal.ConfidentialClientApplication({
+function registerAuthRoutes(app) {
+  const basePath = process.env.BASE_PATH || '';
+
+  if (DEV_MODE) {
+    console.warn('WARNING: DEV_MODE is enabled — authentication is bypassed');
+
+    app.get(basePath + '/auth/login', (req, res) => {
+      req.session.account = DEV_USER;
+      const returnTo = req.session.returnTo || basePath + '/';
+      delete req.session.returnTo;
+      res.redirect(returnTo);
+    });
+
+    app.get(basePath + '/auth/logout', (req, res) => {
+      req.session.destroy(() => res.redirect(basePath + '/'));
+    });
+
+    app.get(basePath + '/auth/me', requireAuth, (req, res) => {
+      res.json(req.session.account);
+    });
+
+    return;
+  }
+
+  const msal = require('@azure/msal-node');
+  const SCOPES = ['openid', 'profile', 'email', 'User.Read'];
+
+  const msalClient = new msal.ConfidentialClientApplication({
     auth: {
       clientId: process.env.AZURE_CLIENT_ID,
       authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}`,
       clientSecret: process.env.AZURE_CLIENT_SECRET,
     },
   });
-}
-
-function registerAuthRoutes(app) {
-  const msalClient = createMsalClient();
   const cryptoProvider = new msal.CryptoProvider();
-  const basePath = process.env.BASE_PATH || '';
 
   // Kick off login — redirect to Microsoft
   app.get(basePath + '/auth/login', async (req, res) => {
