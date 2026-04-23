@@ -36,13 +36,48 @@
       letter-spacing: -0.01em;
     }
 
-    .data-freshness {
+    .header-right {
       margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .data-freshness {
       font-size: 12px;
       color: #94a3b8;
       display: flex;
       align-items: center;
       gap: 6px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .user-name {
+      color: #e2e8f0;
+    }
+
+    .logout-btn {
+      font-size: 12px;
+      color: #94a3b8;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255,255,255,0.14);
+      color: #e2e8f0;
     }
 
     .data-freshness-label {
@@ -318,9 +353,15 @@
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
     <h1>KPI Dashboard</h1>
-    <div class="data-freshness" id="dataFreshness" style="display:none">
-      <span class="data-freshness-label">Data ending</span>
-      <span class="data-freshness-date" id="dataFreshnessDate"></span>
+    <div class="header-right">
+      <div class="data-freshness" id="dataFreshness" style="display:none">
+        <span class="data-freshness-label">Data ending</span>
+        <span class="data-freshness-date" id="dataFreshnessDate"></span>
+      </div>
+      <div class="user-info" id="userInfo" style="display:none">
+        <span class="user-name" id="userName"></span>
+        <a class="logout-btn" href="auth/logout">Sign out</a>
+      </div>
     </div>
   </header>
 
@@ -429,7 +470,7 @@
     }
 
     async function loadData() {
-      const res = await fetch('/api/data');
+      const res = await fetch('api/data');
       appData = await res.json();
       updateFreshness();
       init();
@@ -439,8 +480,8 @@
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
       btn.classList.add('spinning');
-      await fetch('/api/refresh');
-      const res = await fetch('/api/data');
+      await fetch('api/refresh');
+      const res = await fetch('api/data');
       appData = await res.json();
       btn.disabled = false;
       btn.classList.remove('spinning');
@@ -617,6 +658,18 @@
       });
     }
 
+    async function loadUser() {
+      try {
+        const res = await fetch('auth/me');
+        if (res.ok) {
+          const user = await res.json();
+          document.getElementById('userName').textContent = user.name || user.username;
+          document.getElementById('userInfo').style.display = '';
+        }
+      } catch (_) {}
+    }
+
+    loadUser();
     loadData();
   </script>
 </body>
