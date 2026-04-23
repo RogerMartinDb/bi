@@ -406,13 +406,14 @@
 
     function formatTick(val, name) {
       if (PCT_METRICS.has(name)) return (val * 100).toFixed(1) + '%';
+      const fmtK = (v) => { const k = v / 1000; return (k === Math.round(k) ? k.toFixed(0) : k.toFixed(1)) + 'K'; };
       if (INT_METRICS.has(name)) {
-        if (Math.abs(val) >= 1000) return (val / 1000).toFixed(0) + 'K';
+        if (Math.abs(val) >= 1000) return fmtK(val);
         return val.toFixed(0);
       }
       const abs = Math.abs(val);
       if (abs >= 1_000_000) return (val / 1_000_000).toFixed(1) + 'M';
-      if (abs >= 1_000) return (val / 1_000).toFixed(0) + 'K';
+      if (abs >= 1_000) return fmtK(val);
       return val.toFixed(0);
     }
 
