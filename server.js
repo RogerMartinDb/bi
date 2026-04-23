@@ -20,11 +20,13 @@ app.use(session({
   },
 }));
 
+const basePath = process.env.BASE_PATH || '';
+
 // Auth routes (/auth/login, /auth/callback, /auth/logout, /auth/me)
 registerAuthRoutes(app);
 
 // Static files served only to authenticated users
-app.use(requireAuth, express.static(__dirname));
+app.use(basePath, requireAuth, express.static(__dirname));
 
 const SKIP = new Set(['_', 'Activity by Vertical', "Other KPI's", 'Date Ending', 'Week']);
 
@@ -171,12 +173,12 @@ const noCache = (req, res, next) => {
   next();
 };
 
-app.get('/api/refresh', noCache, requireAuth, (req, res) => {
+app.get(basePath + '/api/refresh', noCache, requireAuth, (req, res) => {
   data = loadData();
   res.json({ ok: true });
 });
 
-app.get('/api/data', noCache, requireAuth, (req, res) => res.json(data));
+app.get(basePath + '/api/data', noCache, requireAuth, (req, res) => res.json(data));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`KPI Dashboard running at http://0.0.0.0:${PORT}`);

@@ -360,7 +360,7 @@
       </div>
       <div class="user-info" id="userInfo" style="display:none">
         <span class="user-name" id="userName"></span>
-        <a class="logout-btn" href="/auth/logout">Sign out</a>
+        <a class="logout-btn" href="auth/logout">Sign out</a>
       </div>
     </div>
   </header>
@@ -469,7 +469,7 @@
     }
 
     async function loadData() {
-      const res = await fetch('/api/data');
+      const res = await fetch('api/data');
       appData = await res.json();
       updateFreshness();
       init();
@@ -479,8 +479,8 @@
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
       btn.classList.add('spinning');
-      await fetch('/api/refresh');
-      const res = await fetch('/api/data');
+      await fetch('api/refresh');
+      const res = await fetch('api/data');
       appData = await res.json();
       btn.disabled = false;
       btn.classList.remove('spinning');
@@ -659,7 +659,7 @@
 
     async function loadUser() {
       try {
-        const res = await fetch('/auth/me');
+        const res = await fetch('auth/me');
         if (res.ok) {
           const user = await res.json();
           document.getElementById('userName').textContent = user.name || user.username;
