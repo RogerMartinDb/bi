@@ -1,6 +1,5 @@
 const msal = require('@azure/msal-node');
 
-//const SCOPES = ['openid', 'profile', 'email', 'User.Read', 'GroupMember.Read.All'];
 const SCOPES = ['openid', 'profile', 'email', 'User.Read'];
 
 function createMsalClient() {
@@ -52,27 +51,6 @@ function registerAuthRoutes(app) {
         redirectUri: process.env.REDIRECT_URI,
         codeVerifier: req.session.pkceverifier,
       });
-
-      //const requiredGroupId = process.env.AZURE_REQUIRED_GROUP_ID;
-      const requiredGroupId = null;
-      if (requiredGroupId) {
-        const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/checkMemberGroups', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${result.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ groupIds: [requiredGroupId] }),
-        });
-        if (!graphRes.ok) {
-          console.error('Group membership check failed:', await graphRes.text());
-          return res.status(500).send('Could not verify group membership. Please try again.');
-        }
-        const { value } = await graphRes.json();
-        if (!value.includes(requiredGroupId)) {
-          return res.status(403).send('Access denied: your account is not authorised to use this application.');
-        }
-      }
 
       req.session.account = {
         name: result.account.name,
