@@ -1,0 +1,10 @@
+sudo nano /etc/systemd/system/bi-dashboard.service                                                                                                                                  
+sudo systemctl daemon-reload
+sudo systemctl enable bi-dashboard   # auto-start on boot
+sudo systemctl start bi-dashboard
+sudo systemctl status bi-dashboard   # verify it's running
+
+Useful commands going forward:
+sudo systemctl stop bi-dashboard
+sudo systemctl restart bi-dashboard
+journalctl -u bi-dashboard -f        # follow logs
