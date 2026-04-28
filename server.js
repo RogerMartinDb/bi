@@ -25,6 +25,10 @@ const basePath = process.env.BASE_PATH || '';
 // Auth routes (/auth/login, /auth/callback, /auth/logout, /auth/me)
 registerAuthRoutes(app);
 
+if (basePath) {
+  app.get('/', (req, res) => res.redirect(basePath + '/'));
+}
+
 // Static files served only to authenticated users
 app.use(basePath, requireAuth, express.static(__dirname));
 
@@ -180,6 +184,11 @@ app.get(basePath + '/api/refresh', noCache, requireAuth, (req, res) => {
 
 app.get(basePath + '/api/data', noCache, requireAuth, (req, res) => res.json(data));
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`KPI Dashboard running at http://0.0.0.0:${PORT}`);
+});
+
+server.on('error', (err) => {
+  console.error(`Failed to start server: ${err.message}`);
+  process.exit(1);
 });
