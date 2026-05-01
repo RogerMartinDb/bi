@@ -269,6 +269,8 @@
       flex-shrink: 0;
     }
 
+    .year-zero { margin-right: 16px; }
+
     /* ---- Trend mode segmented control ---- */
     .trend-control {
       display: flex;
@@ -345,10 +347,137 @@
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Mobile menu button ---- */
+    .menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      color: #e2e8f0;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .menu-btn:hover { background: rgba(255,255,255,0.14); }
+
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ---- Responsive: phones (portrait + landscape) ---- */
+    @media (max-width: 768px), (max-height: 500px) {
+      header {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+
+      header h1 { font-size: 15px; }
+      header > svg { display: none; }
+
+      .menu-btn { display: inline-flex; }
+
+      .header-right { gap: 8px; }
+
+      .data-freshness { font-size: 11px; }
+      .data-freshness-label { display: none; }
+      .data-freshness-date { font-size: 11px; padding: 2px 8px; }
+
+      .user-info .user-name { display: none; }
+      .logout-btn { padding: 4px 8px; }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 240px;
+        z-index: 30;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      }
+
+      .sidebar.open { transform: translateX(0); }
+
+      .chart-area { padding: 12px 12px 14px; }
+
+      .chart-header { gap: 8px; margin-bottom: 10px; }
+      .chart-title { font-size: 16px; }
+      .chart-group { font-size: 11px; }
+
+      .refresh-btn { padding: 6px 10px; font-size: 12px; }
+      .refresh-btn span { display: none; }
+
+      .chart-card { padding: 12px 6px 6px; border-radius: 10px; }
+
+      .years-bar {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 6px 10px;
+        padding-top: 10px;
+      }
+
+      .trend-control { margin-right: 0; gap: 4px; }
+      .trend-control .trend-label { font-size: 9px; }
+      .segmented label { padding: 4px 8px; font-size: 11px; }
+
+      .year-item label { padding: 4px 8px; font-size: 12px; }
+      .year-list { flex-wrap: wrap; }
+      .years-bar .years-label { margin-right: 2px; font-size: 9px; }
+      .year-zero { margin-right: 0; }
+    }
+
+    /* ---- Short viewports (landscape phones) ---- */
+    @media (max-height: 500px) {
+      header { padding: 6px 10px; }
+      header h1 { font-size: 14px; }
+
+      .chart-area { padding: 8px 10px 6px; }
+      .chart-header { margin-bottom: 6px; }
+      .chart-card { padding: 8px 4px 4px; }
+
+      .years-bar {
+        padding-top: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 6px;
+        scrollbar-width: thin;
+      }
+
+      .years-bar .years-label,
+      .trend-control .trend-label { display: none; }
+
+      .year-item label { padding: 3px 7px; font-size: 11px; }
+      .segmented label { padding: 3px 7px; font-size: 11px; }
+    }
   </style>
 </head>
 <body>
   <header>
+    <button class="menu-btn" id="menuBtn" aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
@@ -365,8 +494,10 @@
     </div>
   </header>
 
+  <div class="backdrop" id="backdrop"></div>
+
   <div class="main">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="metric-section">
         <h2>Metric</h2>
         <div class="metric-list" id="metricList"></div>
@@ -381,7 +512,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
           </svg>
-          Refresh
+          <span>Refresh</span>
         </button>
       </div>
       <div class="chart-card">
@@ -402,7 +533,7 @@
             <label for="trendOnly">Trend only</label>
           </div>
         </div>
-        <div class="year-item" style="margin-right: 16px;">
+        <div class="year-item year-zero">
           <label>
             <input type="checkbox" id="yZero">
             <span>Y-axis from 0</span>
@@ -440,6 +571,19 @@
     let appData = null;
     let chart = null;
     let currentMetric = '';
+
+    const isNarrow = () => window.matchMedia('(max-width: 768px), (max-height: 500px)').matches;
+
+    function setSidebarOpen(open) {
+      document.getElementById('sidebar').classList.toggle('open', open);
+      document.getElementById('backdrop').classList.toggle('open', open);
+    }
+
+    document.getElementById('menuBtn').addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      setSidebarOpen(!sidebar.classList.contains('open'));
+    });
+    document.getElementById('backdrop').addEventListener('click', () => setSidebarOpen(false));
 
     function formatValue(val, name) {
       if (val === null || val === undefined) return 'N/A';
@@ -555,7 +699,6 @@
             legend: {
               position: 'top',
               labels: {
-                font: { size: 12 }, boxWidth: 28, padding: 16,
                 filter: (item) => !item.text.endsWith(' trend'),
               },
             },
@@ -572,12 +715,11 @@
           scales: {
             x: {
               grid: { color: 'rgba(0,0,0,0.04)' },
-              ticks: { font: { size: 11 }, maxTicksLimit: 26 },
+              ticks: {},
             },
             y: {
               grid: { color: 'rgba(0,0,0,0.04)' },
               ticks: {
-                font: { size: 11 },
                 callback: (val) => formatTick(val, currentMetric),
               },
             },
@@ -585,8 +727,27 @@
         },
       });
 
+      applyResponsiveChartOptions();
+      window.addEventListener('resize', () => {
+        applyResponsiveChartOptions();
+        if (chart) chart.update('none');
+      });
+
       // Select first metric now that chart exists
       selectMetric(appData.metrics[0].key);
+    }
+
+    function applyResponsiveChartOptions() {
+      if (!chart) return;
+      const narrow = isNarrow();
+      const tickFont = { size: narrow ? 10 : 11 };
+      chart.options.scales.x.ticks.font = tickFont;
+      chart.options.scales.x.ticks.maxTicksLimit = narrow ? 13 : 26;
+      chart.options.scales.y.ticks.font = tickFont;
+      const legendLabels = chart.options.plugins.legend.labels;
+      legendLabels.font = { size: narrow ? 11 : 12 };
+      legendLabels.boxWidth = narrow ? 18 : 28;
+      legendLabels.padding = narrow ? 10 : 16;
     }
 
     function selectMetric(key) {
@@ -594,6 +755,7 @@
         el.classList.toggle('selected', el.dataset.metric === key);
       });
       currentMetric = key;
+      if (isNarrow()) setSidebarOpen(false);
       updateChart();
     }
 
