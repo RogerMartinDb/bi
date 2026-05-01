@@ -402,6 +402,12 @@
             <label for="trendOnly">Trend only</label>
           </div>
         </div>
+        <div class="year-item" style="margin-right: 16px;">
+          <label>
+            <input type="checkbox" id="yZero">
+            <span>Y-axis from 0</span>
+          </label>
+        </div>
         <span class="years-label">Years</span>
         <ul class="year-list" id="yearList"></ul>
       </div>
@@ -510,6 +516,9 @@
       document.querySelectorAll('#trendMode input').forEach(el => {
         el.addEventListener('change', updateChart);
       });
+
+      // --- Y-axis zero toggle ---
+      document.getElementById('yZero').addEventListener('change', updateChart);
 
       // --- Metric list ---
       const metricList = document.getElementById('metricList');
@@ -638,6 +647,7 @@
         }
       });
 
+      chart.options.scales.y.beginAtZero = document.getElementById('yZero').checked;
       chart.data.datasets = datasets;
       chart.update();
     }
