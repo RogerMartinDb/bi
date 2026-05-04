@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
@@ -9,7 +10,14 @@ const { registerAuthRoutes, requireAuth } = require('./auth');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.set('trust proxy', 1);
+
 app.use(session({
+  store: new FileStore({
+    path: path.join(__dirname, 'sessions'),
+    ttl: 8 * 60 * 60,
+    retries: 2,
+  }),
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
