@@ -816,9 +816,12 @@
     }
 
     // Centered moving average; windowSize should be odd.
+    // Only emits a value where the underlying week has data, so the trend
+    // doesn't extend into future weeks that haven't happened yet.
     function smoothSeries(values, windowSize) {
       const half = Math.floor(windowSize / 2);
-      return values.map((_, i) => {
+      return values.map((cur, i) => {
+        if (cur === null || cur === undefined) return null;
         let sum = 0, count = 0;
         for (let j = i - half; j <= i + half; j++) {
           if (j < 0 || j >= values.length) continue;
